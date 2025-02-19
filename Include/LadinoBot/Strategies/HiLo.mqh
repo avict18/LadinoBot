@@ -13,27 +13,27 @@
 
 class HiLo {
    private:
-      ENUM_SINAL_TENDENCIA _tendenciaAtual;
+      ENUM_TREND_SIGNAL _currentTrend;
       int HiLoHandle;
-      int _periodo;
+      int _period;
    public:
       HiLo();
-      bool inicializar(int periodo = 4, ENUM_TIMEFRAMES tempoGrafico = PERIOD_CURRENT, long chartId = 0);
-      double posicaoAtual();
-      ENUM_SINAL_TENDENCIA tendenciaAtual();
-      bool verificarTendencia();
-      virtual void onTendenciaMudou(ENUM_SINAL_TENDENCIA novaTendencia);
+      bool initialize(int period = 4, ENUM_TIMEFRAMES chartTime = PERIOD_CURRENT, long chartId = 0);
+      double currentPosition();
+      ENUM_TREND_SIGNAL currentTrend();
+      bool checkTrend();
+      virtual void onTrendChanged(ENUM_TREND_SIGNAL newTrend);
 };
 
 HiLo::HiLo() {
    HiLoHandle = 0;
-   _tendenciaAtual = INDEFINIDA;
-   _periodo = 4;
+   _currentTrend = UNDEFINED;
+   _period = 4;
 }
 
-bool HiLo::inicializar(int periodo = 4, ENUM_TIMEFRAMES tempoGrafico = PERIOD_CURRENT, long chartId = 0) {
-   _periodo = periodo;
-   HiLoHandle = iCustom(_Symbol, tempoGrafico, "::Indicators\\gann_hi_lo_activator_ssl", _periodo);
+bool HiLo::initialize(int period = 4, ENUM_TIMEFRAMES chartTime = PERIOD_CURRENT, long chartId = 0) {
+   _period = period;
+   HiLoHandle = iCustom(_Symbol, chartTime, "::Indicators\\gann_hi_lo_activator_ssl", _period);
    if(HiLoHandle == INVALID_HANDLE) {
       Print("Error creating HiLo indicator");
       return false;
@@ -42,38 +42,38 @@ bool HiLo::inicializar(int periodo = 4, ENUM_TIMEFRAMES tempoGrafico = PERIOD_CU
    return true;
 }
 
-double HiLo::posicaoAtual() {
+double HiLo::currentPosition() {
    double hiloBuffer[1];
-   if(CopyBuffer(HiLoHandle,0,0,1,hiloBuffer)!=1) {
+   if(CopyBuffer(HiLoHandle,0,0,1,hiloBuffer) != 1) {
       Print("CopyBuffer from HiLo failed, no data");
       return -1;
    }
    return hiloBuffer[0];
 }
 
-ENUM_SINAL_TENDENCIA HiLo::tendenciaAtual() {
-   double hiloTendencia[1];
-   if(CopyBuffer(HiLoHandle,4,0,1,hiloTendencia)!=1) {
+ENUM_TREND_SIGNAL HiLo::currentTrend() {
+   double hiloTrend[1];
+   if(CopyBuffer(HiLoHandle,4,0,1,hiloTrend) != 1) {
       Print("CopyBuffer from HiLo failed, no data");
       return false;
    }
-   if (hiloTendencia[0] > 0)
-      return ALTA;
-   else if (hiloTendencia[0] < 0) 
-      return BAIXA;
+   if (hiloTrend[0] > 0)
+      return BULLISH;
+   else if (hiloTrend[0] < 0) 
+      return BEARISH;
    else
-      return INDEFINIDA;
+      return UNDEFINED;
 }
 
-bool HiLo::verificarTendencia() {
-   ENUM_SINAL_TENDENCIA tendencia = tendenciaAtual();
-   if (_tendenciaAtual != tendencia) {
-      _tendenciaAtual = tendencia;
-      onTendenciaMudou(_tendenciaAtual);
+bool HiLo::checkTrend() {
+   ENUM_TREND_SIGNAL trend = currentTrend();
+   if (_currentTrend != trend) {
+      _currentTrend = trend;
+      onTrendChanged(_currentTrend);
    }
    return true;
 }
 
-void HiLo::onTendenciaMudou(ENUM_SINAL_TENDENCIA novaTendencia) {
+void HiLo::onTrendChanged(ENUM_TREND_SIGNAL newTrend) {
    // 
 }
