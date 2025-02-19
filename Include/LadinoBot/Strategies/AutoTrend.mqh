@@ -12,210 +12,209 @@ class AutoTrend {
       AutoTrend();
       ~AutoTrend();
 
-      double posicaoLTB(long chart_id, datetime tempo);
-      double posicaoLTA(long chart_id, datetime tempo);
-      bool rompeuLTB(long chart_id, datetime tempo);
-      bool rompeuLTA(long chart_id, datetime tempo);
-      int gerarLTB(datetime inicio, ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15);
-      int gerarLTA(datetime inicio, ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15);
-      void limparLinha(long chart_id = 0);
-      double ultimoSuporte(ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15);
-      double ultimaResistencia(ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15);
+      double positionLTB(long chart_id, datetime time);
+      double positionLTA(long chart_id, datetime time);
+      bool brokeLTB(long chart_id, datetime time);
+      bool brokeLTA(long chart_id, datetime time);
+      int generateLTB(datetime start, ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15);
+      int generateLTA(datetime start, ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15);
+      void clearLine(long chart_id = 0);
+      double lastSupport(ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15);
+      double lastResistance(ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15);
 };
 
-double AutoTrend::posicaoLTB(long chart_id, datetime tempo) {
-   string nome = "ltb_" + IntegerToString(chart_id);
-   return ObjectGetValueByTime(chart_id, nome, tempo);
+double AutoTrend::positionLTB(long chart_id, datetime time) {
+   string name = "ltb_" + IntegerToString(chart_id);
+   return ObjectGetValueByTime(chart_id, name, time);
 }
 
-double AutoTrend::posicaoLTA(long chart_id, datetime tempo) {
-   string nome = "lta_" + IntegerToString(chart_id);
-   return ObjectGetValueByTime(chart_id, nome, tempo);
+double AutoTrend::positionLTA(long chart_id, datetime time) {
+   string name = "lta_" + IntegerToString(chart_id);
+   return ObjectGetValueByTime(chart_id, name, time);
 }
 
-bool AutoTrend::rompeuLTB(long chart_id, datetime tempo) {
-   double tickMinimo = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   double preco = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   preco = NormalizeDouble(preco, _Digits);
-   preco = preco - MathMod(preco, tickMinimo);
+bool AutoTrend::brokeLTB(long chart_id, datetime time) {
+   double tickMin = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   price = NormalizeDouble(price, _Digits);
+   price = price - MathMod(price, tickMin);
    
-   string nome = "ltb_" + IntegerToString(chart_id);
-   double posicaoAtual = ObjectGetValueByTime(chart_id, nome, tempo);
-   return preco > posicaoAtual;
+   string name = "ltb_" + IntegerToString(chart_id);
+   double currentPosition = ObjectGetValueByTime(chart_id, name, time);
+   return price > currentPosition;
 }
 
-bool AutoTrend::rompeuLTA(long chart_id, datetime tempo) {
-   double tickMinimo = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   double preco = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   preco = NormalizeDouble(preco, _Digits);
-   preco = preco - MathMod(preco, tickMinimo);
+bool AutoTrend::brokeLTA(long chart_id, datetime time) {
+   double tickMin = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   price = NormalizeDouble(price, _Digits);
+   price = price - MathMod(price, tickMin);
    
-   string nome = "lta_" + IntegerToString(chart_id);
-   double posicaoAtual = ObjectGetValueByTime(chart_id, nome, tempo);
-   return preco < posicaoAtual;
+   string name = "lta_" + IntegerToString(chart_id);
+   double currentPosition = ObjectGetValueByTime(chart_id, name, time);
+   return price < currentPosition;
 }
 
-int AutoTrend::gerarLTB(datetime inicio, ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15) {
+int AutoTrend::generateLTB(datetime start, ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15) {
 
-   MqlRates rt[];
-   if(CopyRates(_Symbol, periodo, 0, velas, rt) != velas) {
+   MqlRates rates[];
+   if(CopyRates(_Symbol, period, 0, candles, rates) != candles) {
       Print("CopyRates of ",_Symbol," failed, no history");
       return 0;
    }
 
-   int velaEsquerdaIndex = 1;
-   int velaDireitaIndex = ArraySize(rt) - 1;
-   MqlRates velaEsquerda = rt[velaEsquerdaIndex];
-   MqlRates velaDireita = rt[velaDireitaIndex];
+   int leftCandleIndex = 1;
+   int rightCandleIndex = ArraySize(rates) - 1;
+   MqlRates leftCandle = rates[leftCandleIndex];
+   MqlRates rightCandle = rates[rightCandleIndex];
 
-   for (int i = 1; i < ArraySize(rt); i++) {
-      if (rt[i].time < inicio) {
-         velaEsquerda = rt[i];
-         velaEsquerdaIndex = i;
+   for (int i = 1; i < ArraySize(rates); i++) {
+      if (rates[i].time < start) {
+         leftCandle = rates[i];
+         leftCandleIndex = i;
       }
-      else if (rt[i].high >= velaEsquerda.high) {
-         velaEsquerda = rt[i];
-         velaEsquerdaIndex = i;
+      else if (rates[i].high >= leftCandle.high) {
+         leftCandle = rates[i];
+         leftCandleIndex = i;
       }
    }
-   bool emBaixa = true;
-   for (int i = velaEsquerdaIndex + 1; i < ArraySize(rt); i++) {
-      if (emBaixa && (rt[i-1].high < rt[i].high))
-         emBaixa = false;
-      if (!emBaixa && (rt[i-1].high > rt[i].high)) {
-         velaDireita = rt[i];
-         velaDireitaIndex = i;
+   bool inDowntrend = true;
+   for (int i = leftCandleIndex + 1; i < ArraySize(rates); i++) {
+      if (inDowntrend && (rates[i-1].high < rates[i].high))
+         inDowntrend = false;
+      if (!inDowntrend && (rates[i-1].high > rates[i].high)) {
+         rightCandle = rates[i];
+         rightCandleIndex = i;
          break;
       }
    }
    
    ObjectDelete(chart_id, "lta_" + IntegerToString(chart_id));
-   string nome = "ltb_" + IntegerToString(chart_id);
-   if (ObjectFind(chart_id, nome) < 0) {
-      if (ObjectCreate(chart_id, nome, OBJ_TREND, 0, velaEsquerda.time, velaEsquerda.high, velaDireita.time, velaDireita.high)) {
-         ObjectSetInteger(chart_id, nome, OBJPROP_WIDTH, 2);
-         ObjectSetInteger(chart_id, nome, OBJPROP_COLOR, clrRed);
-         ObjectSetInteger(chart_id, nome, OBJPROP_RAY_RIGHT, true);
-         ObjectSetInteger(chart_id, nome, OBJPROP_SELECTABLE, true);
+   string name = "ltb_" + IntegerToString(chart_id);
+   if (ObjectFind(chart_id, name) < 0) {
+      if (ObjectCreate(chart_id, name, OBJ_TREND, 0, leftCandle.time, leftCandle.high, rightCandle.time, rightCandle.high)) {
+         ObjectSetInteger(chart_id, name, OBJPROP_WIDTH, 2);
+         ObjectSetInteger(chart_id, name, OBJPROP_COLOR, clrRed);
+         ObjectSetInteger(chart_id, name, OBJPROP_RAY_RIGHT, true);
+         ObjectSetInteger(chart_id, name, OBJPROP_SELECTABLE, true);
       }
       else {
-         Print("Erro ao criar a LTB.");
+         Print("Error creating the LTB.");
          return 0;
       }
    }
    else {
-      ObjectMove(chart_id, nome, 0, velaEsquerda.time, velaEsquerda.high);
-      ObjectMove(chart_id, nome, 1, velaDireita.time, velaDireita.high);
+      ObjectMove(chart_id, name, 0, leftCandle.time, leftCandle.high);
+      ObjectMove(chart_id, name, 1, rightCandle.time, rightCandle.high);
    }
 
-   double posicaoAtual = 0;
-   for (int i = velaEsquerdaIndex; i < velaDireitaIndex; i++) {
-      posicaoAtual = ObjectGetValueByTime(0, nome, rt[i].time);
-      if (posicaoAtual != 0 && posicaoAtual < rt[i].high) {
-         ObjectMove(chart_id, nome, 1, rt[i].time, rt[i].high);
+   double currentPosition = 0;
+   for (int i = leftCandleIndex; i < rightCandleIndex; i++) {
+      currentPosition = ObjectGetValueByTime(0, name, rates[i].time);
+      if (currentPosition != 0 && currentPosition < rates[i].high) {
+         ObjectMove(chart_id, name, 1, rates[i].time, rates[i].high);
          ChartRedraw(chart_id);
       }
    }
-   return velaDireitaIndex - velaEsquerdaIndex;
+   return rightCandleIndex - leftCandleIndex;
 }
 
-int AutoTrend::gerarLTA(datetime inicio, ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15) {
+int AutoTrend::generateLTA(datetime start, ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15) {
 
-   MqlRates rt[];
-   if(CopyRates(_Symbol, periodo, 0, velas, rt) != velas) {
+   MqlRates rates[];
+   if(CopyRates(_Symbol, period, 0, candles, rates) != candles) {
       Print("CopyRates of ",_Symbol," failed, no history");
       return 0;
    }
 
-   int velaEsquerdaIndex = 1;
-   int velaDireitaIndex = ArraySize(rt) - 1;
-   MqlRates velaEsquerda = rt[velaEsquerdaIndex];
-   MqlRates velaDireita = rt[velaDireitaIndex];
+   int leftCandleIndex = 1;
+   int rightCandleIndex = ArraySize(rates) - 1;
+   MqlRates leftCandle = rates[leftCandleIndex];
+   MqlRates rightCandle = rates[rightCandleIndex];
 
-   for (int i = 1; i < ArraySize(rt); i++) {
-      if (rt[i].time < inicio) {
-         velaEsquerda = rt[i];
-         velaEsquerdaIndex = i;
+   for (int i = 1; i < ArraySize(rates); i++) {
+      if (rates[i].time < start) {
+         leftCandle = rates[i];
+         leftCandleIndex = i;
       }
-      else if (rt[i].low <= velaEsquerda.low) {
-         velaEsquerda = rt[i];
-         velaEsquerdaIndex = i;
+      else if (rates[i].low <= leftCandle.low) {
+         leftCandle = rates[i];
+         leftCandleIndex = i;
       }
    }
-   //int emQueda = velaEsquerdaIndex;
-   bool emAlta = true;
-   for (int i = velaEsquerdaIndex + 1; i < ArraySize(rt); i++) {
-      if (emAlta && (rt[i-1].low > rt[i].low))
-         emAlta = false;
-      if (!emAlta && (rt[i-1].low < rt[i].low)) {
-         velaDireita = rt[i];
-         velaDireitaIndex = i;
+   bool inUptrend = true;
+   for (int i = leftCandleIndex + 1; i < ArraySize(rates); i++) {
+      if (inUptrend && (rates[i-1].low > rates[i].low))
+         inUptrend = false;
+      if (!inUptrend && (rates[i-1].low < rates[i].low)) {
+         rightCandle = rates[i];
+         rightCandleIndex = i;
          break;
       }
    }
    
    ObjectDelete(chart_id, "ltb_" + IntegerToString(chart_id));
-   string nome = "lta_" + IntegerToString(chart_id);
-   if (ObjectFind(chart_id, nome) < 0) {
-      if (ObjectCreate(chart_id, nome, OBJ_TREND, 0, velaEsquerda.time, velaEsquerda.low, velaDireita.time, velaDireita.low)) {
-         ObjectSetInteger(chart_id, nome, OBJPROP_WIDTH, 2);
-         ObjectSetInteger(chart_id, nome, OBJPROP_COLOR, clrGreen);
-         ObjectSetInteger(chart_id, nome, OBJPROP_RAY_RIGHT, true);
-         ObjectSetInteger(chart_id, nome, OBJPROP_SELECTABLE, true);
+   string name = "lta_" + IntegerToString(chart_id);
+   if (ObjectFind(chart_id, name) < 0) {
+      if (ObjectCreate(chart_id, name, OBJ_TREND, 0, leftCandle.time, leftCandle.low, rightCandle.time, rightCandle.low)) {
+         ObjectSetInteger(chart_id, name, OBJPROP_WIDTH, 2);
+         ObjectSetInteger(chart_id, name, OBJPROP_COLOR, clrGreen);
+         ObjectSetInteger(chart_id, name, OBJPROP_RAY_RIGHT, true);
+         ObjectSetInteger(chart_id, name, OBJPROP_SELECTABLE, true);
       }
       else {
-         Print("Erro ao criar a LTA.");
+         Print("Error creating the LTA.");
          return 0;
       }
    }
    else {
-      ObjectMove(chart_id, nome, 0, velaEsquerda.time, velaEsquerda.low);
-      ObjectMove(chart_id, nome, 1, velaDireita.time, velaDireita.low);
+      ObjectMove(chart_id, name, 0, leftCandle.time, leftCandle.low);
+      ObjectMove(chart_id, name, 1, rightCandle.time, rightCandle.low);
    }
 
-   double posicaoAtual = 0;
-   for (int i = velaEsquerdaIndex; i < velaDireitaIndex; i++) {
-      posicaoAtual = ObjectGetValueByTime(0, nome, rt[i].time);
-      if (posicaoAtual != 0 && posicaoAtual > rt[i].low) {
-         ObjectMove(chart_id, nome, 1, rt[i].time, rt[i].low);
+   double currentPosition = 0;
+   for (int i = leftCandleIndex; i < rightCandleIndex; i++) {
+      currentPosition = ObjectGetValueByTime(0, name, rates[i].time);
+      if (currentPosition != 0 && currentPosition > rates[i].low) {
+         ObjectMove(chart_id, name, 1, rates[i].time, rates[i].low);
          ChartRedraw(chart_id);
       }
    }
       
-   return velaDireitaIndex - velaEsquerdaIndex;
+   return rightCandleIndex - leftCandleIndex;
 }
 
-void AutoTrend::limparLinha(long chart_id = 0) {
+void AutoTrend::clearLine(long chart_id = 0) {
    ObjectDelete(chart_id, "lta_" + IntegerToString(chart_id));
    ObjectDelete(chart_id, "ltb_" + IntegerToString(chart_id));
 }
 
-double AutoTrend::ultimoSuporte(ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15) {
-   MqlRates rt[];
-   if(CopyRates(_Symbol, periodo, 0, velas, rt) != velas) {
+double AutoTrend::lastSupport(ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15) {
+   MqlRates rates[];
+   if(CopyRates(_Symbol, period, 0, candles, rates) != candles) {
       Print("CopyRates of ",_Symbol," failed, no history");
       return 0;
    }
-   double suporte = rt[ArraySize(rt) - 1].low;
-   for (int i = ArraySize(rt) - 2; i >= 0; i--) {
-      if (rt[i].low <= suporte)
-         suporte = rt[i].low;
+   double support = rates[ArraySize(rates) - 1].low;
+   for (int i = ArraySize(rates) - 2; i >= 0; i--) {
+      if (rates[i].low <= support)
+         support = rates[i].low;
    }
-   return suporte;
+   return support;
 }
 
-double AutoTrend::ultimaResistencia(ENUM_TIMEFRAMES periodo = PERIOD_M1, long chart_id = 0, int velas = 15) {
-   MqlRates rt[];
-   if(CopyRates(_Symbol, periodo, 0, velas, rt) != velas) {
+double AutoTrend::lastResistance(ENUM_TIMEFRAMES period = PERIOD_M1, long chart_id = 0, int candles = 15) {
+   MqlRates rates[];
+   if(CopyRates(_Symbol, period, 0, candles, rates) != candles) {
       Print("CopyRates of ",_Symbol," failed, no history");
       return 0;
    }
-   double resistencia = rt[ArraySize(rt) - 1].high;
-   for (int i = ArraySize(rt) - 2; i >= 0; i--) {
-      if (rt[i].high >= resistencia)
-         resistencia = rt[i].high;
+   double resistance = rates[ArraySize(rates) - 1].high;
+   for (int i = ArraySize(rates) - 2; i >= 0; i--) {
+      if (rates[i].high >= resistance)
+         resistance = rates[i].high;
    }
-   return resistencia;
+   return resistance;
 }
 
 AutoTrend::AutoTrend() {
